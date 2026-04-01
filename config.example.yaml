@@ -1,0 +1,39 @@
+monitor:
+  # Poll interval in seconds
+  interval: 10
+  # Unix socket path for Tailscale local API
+  tailscale_socket: /var/run/tailscale/tailscaled.sock
+  # Fallback HTTP address if socket is unavailable
+  tailscale_http_addr: http://localhost:41112
+  # Fallback CLI path (auto-detected if empty). Used on macOS App Store version.
+  # tailscale_cli: /usr/local/bin/tailscale
+  # Number of change events to keep in memory
+  history_size: 100
+
+server:
+  host: 0.0.0.0
+  # port is NOT hot-reloadable — set via --port flag or PORT env var at startup
+
+notifications:
+  # Suppress repeated alerts for the same event within this window (seconds)
+  dedupe_window_seconds: 300
+
+  telegram:
+    enabled: false
+    bot_token: "YOUR_BOT_TOKEN"
+    chat_id: "YOUR_CHAT_ID"
+    # HTML or Markdown
+    parse_mode: HTML
+
+  email:
+    enabled: false
+    smtp_host: smtp.gmail.com
+    smtp_port: 587
+    # false = STARTTLS, true = TLS (use port 465 for TLS)
+    secure: false
+    username: you@gmail.com
+    password: "YOUR_APP_PASSWORD"
+    from: "Tailscale Probe <you@gmail.com>"
+    to:
+      - admin@example.com
+    subject_prefix: "[Tailscale Probe]"

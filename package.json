@@ -1,0 +1,29 @@
+{
+  "name": "tailscale-probe",
+  "version": "1.0.0",
+  "description": "Tailscale network monitoring probe with glassmorphism UI",
+  "type": "module",
+  "main": "dist/backend.js",
+  "scripts": {
+    "dev": "tsx watch src/backend/index.ts",
+    "dev:ui": "esbuild src/frontend/app.ts --bundle --outfile=public/app.js --platform=browser --format=esm --watch",
+    "build": "tsc --noEmit && node --import tsx/esm build.ts",
+    "start": "node dist/backend.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fastify/static": "^7.0.4",
+    "chokidar": "^3.6.0",
+    "fastify": "^4.28.1",
+    "js-yaml": "^4.1.0",
+    "nodemailer": "^6.9.14"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^20.14.0",
+    "@types/nodemailer": "^6.4.15",
+    "esbuild": "^0.21.5",
+    "tsx": "^4.15.7",
+    "typescript": "^5.5.2"
+  }
+}

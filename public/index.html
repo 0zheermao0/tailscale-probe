@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tailscale Probe</title>
+  <link rel="stylesheet" href="/styles/base.css" />
+  <link rel="stylesheet" href="/styles/glass.css" />
+  <link rel="stylesheet" href="/styles/animations.css" />
+</head>
+<body>
+
+<!-- Animated background orbs -->
+<div class="bg-orbs" aria-hidden="true">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+</div>
+
+<div class="app">
+  <!-- Header -->
+  <header class="app-header glass-card" style="border-radius:0;border-left:none;border-right:none;border-top:none;">
+    <div class="header-left">
+      <div class="app-logo">🌐</div>
+      <span class="app-title">Tailscale Probe</span>
+    </div>
+    <div class="header-right">
+      <span class="peer-count" id="peer-count">— peers</span>
+      <span class="connection-badge disconnected" id="connection-badge">Connecting...</span>
+      <button class="btn btn-tab" id="hs-tab-btn" style="display:none">⬡ Headscale</button>
+      <button class="btn" id="tailscale-tab-btn" style="display:none">◈ Tailscale</button>
+      <button class="btn" id="config-btn">⚙ Config</button>
+    </div>
+  </header>
+
+  <!-- Main content -->
+  <div class="main-content">
+    <!-- Left sidebar -->
+    <aside class="sidebar">
+      <!-- Self node panel -->
+      <div>
+        <div class="section-label">This Node</div>
+        <div id="self-panel">
+          <div class="glass-card" style="padding:20px;">
+            <div class="skeleton" style="height:20px;width:60%;margin-bottom:10px;"></div>
+            <div class="skeleton" style="height:14px;width:80%;margin-bottom:8px;"></div>
+            <div class="skeleton" style="height:14px;width:50%;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Node settings -->
+      <div>
+        <div class="glass-card node-settings-card">
+          <button class="node-settings-header" id="node-settings-toggle">
+            <span class="node-settings-title">
+              <span class="node-settings-icon">⚙</span>
+              Node Settings
+            </span>
+            <span class="node-settings-arrow" id="node-settings-arrow">▸</span>
+          </button>
+          <div class="node-settings-body" id="node-settings-body">
+            <!-- rendered by node-settings.ts -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Change log -->
+      <div class="log-panel">
+        <div class="section-label">Event Log</div>
+        <div class="glass-card" style="padding:12px;flex:1;">
+          <div id="change-log">
+            <div class="empty-state">Waiting for events...</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Peers grid -->
+    <main>
+      <div class="section-label">Network Peers</div>
+      <div id="peers-grid">
+        <!-- Cards rendered by JS -->
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Headscale admin panel -->
+<div id="headscale-panel" class="headscale-panel" style="display:none">
+  <div class="hs-tabs">
+    <button class="hs-tab active" data-tab="nodes">Nodes</button>
+    <button class="hs-tab" data-tab="users">Users</button>
+    <button class="hs-tab" data-tab="preauth">Pre-auth Keys</button>
+    <button class="hs-tab" data-tab="routes">Routes</button>
+    <button class="hs-tab" data-tab="acl">ACL Policy</button>
+    <button class="hs-tab" data-tab="dns">DNS</button>
+    <button class="hs-tab" data-tab="apikeys">API Keys</button>
+  </div>
+  <div id="hs-tab-content" class="hs-tab-content"></div>
+</div>
+
+<!-- Config overlay + drawer -->
+<div id="config-overlay"></div>
+<div id="config-drawer">
+  <div class="drawer-header">
+    <span class="drawer-title">Configuration</span>
+    <button class="drawer-close" id="config-close">✕</button>
+  </div>
+  <div class="drawer-body">
+    <form id="config-form">
+
+      <div class="form-section">
+        <div class="form-section-title">Headscale</div>
+        <div class="form-row">
+          <label for="cfg-hs-url">Headscale URL</label>
+          <input type="text" id="cfg-hs-url" placeholder="http://localhost:8080" />
+        </div>
+        <div class="form-row">
+          <label for="cfg-hs-key">API Key</label>
+          <input type="password" id="cfg-hs-key" placeholder="Leave blank to keep existing" autocomplete="new-password" />
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">Monitor</div>
+        <div class="form-row">
+          <label for="cfg-interval">Poll interval (seconds)</label>
+          <input type="number" id="cfg-interval" min="5" value="10" />
+        </div>
+        <div class="form-row">
+          <label for="cfg-dedupe">Notification dedup window (seconds)</label>
+          <input type="number" id="cfg-dedupe" min="0" max="3600" value="300" />
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">Telegram</div>
+        <div class="form-row checkbox">
+          <input type="checkbox" id="cfg-tg-enabled" />
+          <label for="cfg-tg-enabled">Enable Telegram notifications</label>
+        </div>
+        <div class="form-row">
+          <label for="cfg-tg-token">Bot token</label>
+          <input type="text" id="cfg-tg-token" placeholder="123456:ABC-DEF..." autocomplete="off" />
+        </div>
+        <div class="form-row">
+          <label for="cfg-tg-chat">Chat ID</label>
+          <input type="text" id="cfg-tg-chat" placeholder="-100..." />
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">Email</div>
+        <div class="form-row checkbox">
+          <input type="checkbox" id="cfg-email-enabled" />
+          <label for="cfg-email-enabled">Enable email notifications</label>
+        </div>
+        <div class="form-row">
+          <label for="cfg-email-host">SMTP host</label>
+          <input type="text" id="cfg-email-host" placeholder="smtp.gmail.com" />
+        </div>
+        <div class="form-row">
+          <label for="cfg-email-port">SMTP port</label>
+          <input type="number" id="cfg-email-port" value="587" />
+        </div>
+        <div class="form-row">
+          <label for="cfg-email-user">Username</label>
+          <input type="email" id="cfg-email-user" placeholder="you@gmail.com" />
+        </div>
+        <div class="form-row">
+          <label for="cfg-email-pass">Password</label>
+          <input type="password" id="cfg-email-pass" placeholder="Leave blank to keep existing" autocomplete="new-password" />
+        </div>
+        <div class="form-row">
+          <label for="cfg-email-from">From address</label>
+          <input type="text" id="cfg-email-from" placeholder="Tailscale Probe &lt;you@gmail.com&gt;" />
+        </div>
+        <div class="form-row">
+          <label for="cfg-email-to">To addresses (comma-separated)</label>
+          <input type="text" id="cfg-email-to" placeholder="admin@example.com, ops@example.com" />
+        </div>
+      </div>
+
+      <div class="drawer-footer" style="padding:0;margin-top:8px;">
+        <button type="submit" class="btn btn-primary" style="width:100%">Save &amp; Apply</button>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+<!-- Peer detail modal -->
+<div id="peer-modal-overlay" class="peer-modal-overlay"></div>
+<div id="peer-modal" class="peer-modal glass-card" role="dialog" aria-modal="true">
+  <div class="peer-modal-header">
+    <div id="peer-modal-title" class="peer-modal-title-wrap"></div>
+    <button id="peer-modal-close" class="drawer-close">✕</button>
+  </div>
+  <div id="peer-modal-body" class="peer-modal-body"></div>
+</div>
+
+<script type="module" src="/app.js"></script>
+</body>
+</html>
