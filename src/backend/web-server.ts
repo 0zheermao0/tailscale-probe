@@ -140,9 +140,7 @@ export class WebServer {
     // Update config
     this.fastify.post<{ Body: Partial<AppConfig> }>('/api/config', async (req, reply) => {
       try {
-        const current = this.configManager.get();
-        const updated = { ...current, ...req.body } as AppConfig;
-        this.configManager.save(updated);
+        this.configManager.update(req.body);
         return { ok: true };
       } catch (err) {
         reply.status(500);

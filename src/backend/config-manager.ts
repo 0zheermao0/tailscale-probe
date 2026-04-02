@@ -79,6 +79,11 @@ export class ConfigManager extends EventEmitter {
     this.watcher = null;
   }
 
+  update(patch: Partial<AppConfig>): void {
+    this.config = deepMerge(this.config, patch);
+    this.save(this.config);
+  }
+
   getSanitized(): Partial<AppConfig> {
     const cfg = structuredClone(this.config);
     if (cfg.notifications.telegram.bot_token) {

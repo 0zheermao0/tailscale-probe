@@ -58,6 +58,7 @@ body {
 }
 
 .main-content {
+  grid-row: 2;
   display: grid;
   grid-template-columns: 320px 1fr;
   grid-template-rows: auto 1fr;
@@ -211,7 +212,14 @@ body {
   color: var(--text-secondary);
 }
 .ip.ipv4 { color: var(--accent-blue); }
-.ip.ipv6 { color: var(--accent-cyan); font-size: 10px; }
+.ip.ipv6 {
+  color: var(--accent-cyan);
+  font-size: 10px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 /* Status badges */
 .badge {
@@ -248,6 +256,10 @@ body {
   font-weight: 400;
   opacity: 0.8;
   font-size: 9px;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Status dot */

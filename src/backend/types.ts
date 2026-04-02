@@ -203,8 +203,8 @@ export interface HeadscalePreauthKey {
   used: boolean;
   expiration: string;
   createdAt: string;
-  user: string;
-  tags: string[];
+  user: HeadscaleUser;
+  aclTags: string[];
 }
 
 export interface HeadscaleApiKey {

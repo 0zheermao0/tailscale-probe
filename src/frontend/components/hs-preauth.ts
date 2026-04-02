@@ -1,9 +1,29 @@
 import type { HeadscalePreauthKey, HeadscaleUser } from '../../backend/types.js';
 import { showToast } from './toast.js';
+import { showConfirm } from './dialog.js';
+
+function buildPreauthCLICmd(userId: string, reusable: boolean, ephemeral: boolean, expiryIso: string, tagsRaw: string): string {
+  let cmd = `headscale preauthkeys create --user ${userId}`;
+  if (reusable) cmd += ' --reusable';
+  if (ephemeral) cmd += ' --ephemeral';
+  if (expiryIso) {
+    const diffMs = new Date(expiryIso).getTime() - Date.now();
+    const diffH = Math.round(diffMs / 3600000);
+    if (diffH > 0) cmd += ` --expiration ${diffH}h`;
+  }
+  const tagList = tagsRaw.split(',').map(t => t.trim()).filter(Boolean).join(',');
+  if (tagList) cmd += ` --tags ${tagList}`;
+  return cmd;
+}
 
 export async function renderHsPreauth(container: HTMLElement): Promise<void> {
   const usersRes = await fetch('/api/headscale/users');
-  const users = await usersRes.json() as HeadscaleUser[];
+  const usersData = await usersRes.json() as HeadscaleUser[] & { error?: string };
+  if (!usersRes.ok || (usersData as { error?: string }).error) {
+    container.innerHTML = `<div class="empty-state" style="color:#f87171">Failed to load users: ${(usersData as { error?: string }).error ?? usersRes.statusText}</div>`;
+    return;
+  }
+  const users = usersData as HeadscaleUser[];
   if (users.length === 0) {
     container.innerHTML = '<div class="empty-state">No users found. Create a user first.</div>';
     return;
@@ -13,10 +33,15 @@ export async function renderHsPreauth(container: HTMLElement): Promise<void> {
 
 async function render(container: HTMLElement, users: HeadscaleUser[], selectedUser: string): Promise<void> {
   const keysRes = await fetch(`/api/headscale/preauthkeys?user=${encodeURIComponent(selectedUser)}`);
-  const keys = await keysRes.json() as HeadscalePreauthKey[];
+  const keysData = await keysRes.json() as HeadscalePreauthKey[] & { error?: string };
+  if (!keysRes.ok || (keysData as { error?: string }).error) {
+    container.innerHTML = `<div class="empty-state" style="color:#f87171">Failed to load pre-auth keys: ${(keysData as { error?: string }).error ?? keysRes.statusText}</div>`;
+    return;
+  }
+  const keys = keysData as HeadscalePreauthKey[];
 
   const userOptions = users.map(u =>
-    `<option value="${esc(u.name)}" ${u.name === selectedUser ? 'selected' : ''}>${esc(u.name)}</option>`
+    `<option value="${esc(u.name)}" data-id="${esc(u.id)}" ${u.name === selectedUser ? 'selected' : ''}>${esc(u.name)}</option>`
   ).join('');
 
   container.innerHTML = `
@@ -48,6 +73,7 @@ async function render(container: HTMLElement, users: HeadscaleUser[], selectedUs
         <input type="text" id="hs-pk-tags" placeholder="tag:server,tag:prod" style="width:180px;background:rgba(0,0,0,.25);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-size:12px;padding:4px 8px;" />
 
         <button class="hs-btn primary" id="hs-create-pk-btn">Generate Key</button>
+        <button class="hs-btn cli" id="hs-copy-pk-cli-btn" title="Copy CLI command to clipboard">$ copy cmd</button>
       </div>
       <div id="hs-pk-reveal" style="display:none" class="hs-key-reveal">
         <span class="hs-key-reveal-value" id="hs-pk-reveal-val"></span>
@@ -61,6 +87,19 @@ async function render(container: HTMLElement, users: HeadscaleUser[], selectedUs
   document.getElementById('hs-preauth-user')?.addEventListener('change', async (e) => {
     const user = (e.target as HTMLSelectElement).value;
     await render(container, users, user);
+  });
+
+  document.getElementById('hs-copy-pk-cli-btn')?.addEventListener('click', () => {
+    const sel = document.getElementById('hs-preauth-user') as HTMLSelectElement | null;
+    const selectedOption = sel?.options[sel.selectedIndex];
+    const userId = selectedOption?.dataset.id ?? selectedOption?.value ?? '';
+    const reusable = (document.getElementById('hs-pk-reusable') as HTMLInputElement).checked;
+    const ephemeral = (document.getElementById('hs-pk-ephemeral') as HTMLInputElement).checked;
+    const expiryInput = (document.getElementById('hs-pk-expiry') as HTMLInputElement).value;
+    const tagsInput = (document.getElementById('hs-pk-tags') as HTMLInputElement).value;
+    const cmd = buildPreauthCLICmd(userId, reusable, ephemeral, expiryInput, tagsInput);
+    navigator.clipboard.writeText(cmd).catch(() => {});
+    showToast('Command copied', 'success');
   });
 
   document.getElementById('hs-create-pk-btn')?.addEventListener('click', async () => {
@@ -115,8 +154,9 @@ function buildTable(keys: HeadscalePreauthKey[]): string {
     const status = k.used ? 'used' : expired ? 'expired' : 'online';
     const statusLabel = k.used ? 'used' : expired ? 'expired' : 'active';
     const expiry = k.expiration && !k.expiration.startsWith('0001') ? fmtDate(k.expiration) : 'Never';
-    const tags = (k.tags ?? []).join(', ') || '—';
+    const tags = (k.aclTags ?? []).join(', ') || '—';
     const keyShort = k.key ? k.key.slice(0, 16) + '…' : '—';
+    const userName = typeof k.user === 'object' ? k.user.name : String(k.user);
 
     return `<tr>
       <td style="font-family:var(--font-mono);font-size:11px">
@@ -129,7 +169,7 @@ function buildTable(keys: HeadscalePreauthKey[]): string {
       <td style="font-size:11px;color:var(--text-muted)">${esc(tags)}</td>
       <td>
         <div class="actions">
-          <button class="hs-btn danger hs-expire-pk-btn" data-user="${esc(k.user)}" data-key="${esc(k.key)}" ${k.used || expired ? 'disabled' : ''}>Expire</button>
+          <button class="hs-btn danger hs-expire-pk-btn" data-user="${esc(userName)}" data-key="${esc(k.key)}" ${k.used || expired ? 'disabled' : ''}>Expire</button>
         </div>
       </td>
     </tr>`;
@@ -151,7 +191,7 @@ function attachTableActions(
 ): void {
   tableEl.querySelectorAll<HTMLElement>('.hs-expire-pk-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
-      if (!confirm('Expire this pre-auth key?')) return;
+      if (!await showConfirm({ title: 'Expire Key', message: 'This pre-auth key will stop working immediately.', confirmLabel: 'Expire', danger: true })) return;
       const user = btn.dataset.user!;
       const key = btn.dataset.key!;
       try {

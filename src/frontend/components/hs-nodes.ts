@@ -1,35 +1,81 @@
 import type { HeadscaleNode, HeadscaleUser } from '../../backend/types.js';
 import { showToast } from './toast.js';
+import { showConfirm, showInput } from './dialog.js';
+import { makeTableState, sortTh, searchInput, wireSearch, wireSortHeaders, type TableState } from './table-utils.js';
 
 export async function renderHsNodes(container: HTMLElement): Promise<void> {
   const [nodesRes, usersRes] = await Promise.all([
     fetch('/api/headscale/nodes'),
     fetch('/api/headscale/users'),
   ]);
-  const nodes = await nodesRes.json() as HeadscaleNode[];
-  const users = await usersRes.json() as HeadscaleUser[];
+  const nodesData = await nodesRes.json() as HeadscaleNode[] & { error?: string };
+  const usersData = await usersRes.json() as HeadscaleUser[] & { error?: string };
+  if (!nodesRes.ok || (nodesData as { error?: string }).error) {
+    container.innerHTML = `<div class="empty-state" style="color:#f87171">Failed to load nodes: ${(nodesData as { error?: string }).error ?? nodesRes.statusText}</div>`;
+    return;
+  }
+  if (!usersRes.ok || (usersData as { error?: string }).error) {
+    container.innerHTML = `<div class="empty-state" style="color:#f87171">Failed to load users: ${(usersData as { error?: string }).error ?? usersRes.statusText}</div>`;
+    return;
+  }
+  render(container, nodesData as HeadscaleNode[], usersData as HeadscaleUser[]);
+}
 
-  render(container, nodes, users);
+function nodeField(n: HeadscaleNode, col: string): string {
+  switch (col) {
+    case 'name': return n.name;
+    case 'ip': return n.ipAddresses?.[0] ?? '';
+    case 'user': return n.user?.name ?? '';
+    case 'os': return n.os ?? '';
+    case 'lastSeen': return n.lastSeen ?? '';
+    case 'expiry': return n.expiry ?? '';
+    case 'tags': return (n.forcedTags ?? []).concat(n.validTags ?? []).join(', ');
+    default: return '';
+  }
 }
 
 function render(container: HTMLElement, nodes: HeadscaleNode[], users: HeadscaleUser[]): void {
   const userOptions = users.map(u => `<option value="${esc(u.name)}">${esc(u.name)}</option>`).join('');
+  const state = makeTableState(nodes, 'name', nodeField);
+
+  const doRender = () => {
+    const wrap = container.querySelector<HTMLElement>('#hs-nodes-table-wrap');
+    if (!wrap) return;
+    wrap.innerHTML = buildTable(state.view(), users, state);
+    attachActions(wrap, users);
+    wireSortHeaders(wrap, state, doRender);
+  };
 
   container.innerHTML = `
     <div class="hs-section-header">
       <span class="hs-section-title">Nodes (${nodes.length})</span>
       <div class="hs-form-row">
-        <label>Filter by user:</label>
+        ${searchInput('Search nodes…')}
+        <label style="margin-left:4px">User:</label>
         <select id="hs-nodes-filter">
-          <option value="">All users</option>
+          <option value="">All</option>
           ${userOptions}
         </select>
       </div>
     </div>
     <div id="hs-nodes-table-wrap">
-      ${buildTable(nodes, users)}
+      ${buildTable(state.view(), users, state)}
     </div>
   `;
+
+  wireSearch(container, state, doRender);
+
+  // Event delegation for CLI copy buttons — guard prevents duplicate listeners on reload
+  if (!container.dataset.cliListenerAttached) {
+    container.dataset.cliListenerAttached = '1';
+    container.addEventListener('click', e => {
+      const btn = (e.target as HTMLElement).closest<HTMLElement>('.hs-copy-cli-btn');
+      if (!btn) return;
+      const cmd = btn.dataset.cmd ?? '';
+      navigator.clipboard.writeText(cmd).catch(() => {});
+      showToast('Command copied', 'success');
+    });
+  }
 
   document.getElementById('hs-nodes-filter')?.addEventListener('change', async (e) => {
     const user = (e.target as HTMLSelectElement).value;
@@ -39,18 +85,25 @@ function render(container: HTMLElement, nodes: HeadscaleNode[], users: Headscale
     try {
       const res = await fetch(`/api/headscale/nodes${user ? `?user=${encodeURIComponent(user)}` : ''}`);
       const filtered = await res.json() as HeadscaleNode[];
-      wrap.innerHTML = buildTable(filtered, users);
+      state.all = filtered;
+      state.query = '';
+      const searchEl = container.querySelector<HTMLInputElement>('.hs-search-input');
+      if (searchEl) searchEl.value = '';
+      wrap.innerHTML = buildTable(state.view(), users, state);
       attachActions(wrap, users);
+      wireSortHeaders(wrap, state, doRender);
     } catch (err) {
       wrap.innerHTML = `<div class="empty-state" style="color:#f87171">${err}</div>`;
     }
   });
 
+  const initialWrap = container.querySelector<HTMLElement>('#hs-nodes-table-wrap')!;
+  wireSortHeaders(initialWrap, state, doRender);
   attachActions(container, users);
 }
 
-function buildTable(nodes: HeadscaleNode[], users: HeadscaleUser[]): string {
-  if (nodes.length === 0) return '<div class="empty-state">No nodes registered</div>';
+function buildTable(nodes: HeadscaleNode[], users: HeadscaleUser[], state: TableState<HeadscaleNode>): string {
+  if (nodes.length === 0) return '<div class="empty-state">No nodes found</div>';
 
   const rows = nodes.map(n => {
     const ip = n.ipAddresses?.[0] ?? '—';
@@ -83,15 +136,25 @@ function buildTable(nodes: HeadscaleNode[], users: HeadscaleUser[]): string {
           </select>
           <button class="hs-btn hs-tag-btn" data-id="${n.id}" data-tags="${esc((n.forcedTags ?? []).join(','))}">Tag</button>
           <button class="hs-btn danger hs-expire-btn" data-id="${n.id}">Expire</button>
+          <button class="hs-btn cli hs-copy-cli-btn" data-cmd="${esc(`headscale nodes expire --identifier ${n.id}`)}" title="Copy CLI command">$</button>
           <button class="hs-btn danger hs-delete-btn" data-id="${n.id}" data-name="${esc(n.name)}">Delete</button>
+          <button class="hs-btn cli hs-copy-cli-btn" data-cmd="${esc(`headscale nodes delete --identifier ${n.id}`)}" title="Copy CLI command">$</button>
         </div>
       </td>
     </tr>`;
   }).join('');
 
+  const s = state as TableState<unknown>;
   return `<table class="hs-table">
     <thead><tr>
-      <th>Name</th><th>IP</th><th>User</th><th>OS</th><th>Last seen</th><th>Expiry</th><th>Tags</th><th>Actions</th>
+      ${sortTh('Name', 'name', s)}
+      ${sortTh('IP', 'ip', s)}
+      ${sortTh('User', 'user', s)}
+      ${sortTh('OS', 'os', s)}
+      ${sortTh('Last seen', 'lastSeen', s)}
+      ${sortTh('Expiry', 'expiry', s)}
+      ${sortTh('Tags', 'tags', s)}
+      <th>Actions</th>
     </tr></thead>
     <tbody>${rows}</tbody>
   </table>`;
@@ -103,7 +166,7 @@ function attachActions(container: HTMLElement, users: HeadscaleUser[]): void {
     btn.addEventListener('click', async () => {
       const id = btn.dataset.id!;
       const current = btn.dataset.name ?? '';
-      const newName = prompt('New node name:', current);
+      const newName = await showInput({ title: 'Rename Node', placeholder: 'New name', defaultValue: current });
       if (!newName || newName === current) return;
       try {
         await apiFetch(`/api/headscale/nodes/${id}/rename/${encodeURIComponent(newName)}`, 'POST');
@@ -135,7 +198,7 @@ function attachActions(container: HTMLElement, users: HeadscaleUser[]): void {
     btn.addEventListener('click', async () => {
       const id = btn.dataset.id!;
       const current = btn.dataset.tags ?? '';
-      const input = prompt('Tags (comma-separated, prefix tag:):', current);
+      const input = await showInput({ title: 'Set Tags', message: 'Comma-separated, e.g. tag:server,tag:prod', placeholder: 'tag:server', defaultValue: current });
       if (input === null) return;
       const tags = input.split(',').map(t => t.trim()).filter(Boolean);
       try {
@@ -149,7 +212,7 @@ function attachActions(container: HTMLElement, users: HeadscaleUser[]): void {
   // Expire
   container.querySelectorAll<HTMLElement>('.hs-expire-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
-      if (!confirm('Expire this node? It will need to re-authenticate.')) return;
+      if (!await showConfirm({ title: 'Expire Node', message: 'This node will need to re-authenticate.', confirmLabel: 'Expire', danger: true })) return;
       const id = btn.dataset.id!;
       try {
         await apiFetch(`/api/headscale/nodes/${id}/expire`, 'POST');
@@ -163,7 +226,7 @@ function attachActions(container: HTMLElement, users: HeadscaleUser[]): void {
   container.querySelectorAll<HTMLElement>('.hs-delete-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
       const name = btn.dataset.name ?? btn.dataset.id!;
-      if (!confirm(`Delete node "${name}"? This cannot be undone.`)) return;
+      if (!await showConfirm({ title: 'Delete Node', message: `Delete "${name}"? This cannot be undone.`, confirmLabel: 'Delete', danger: true })) return;
       const id = btn.dataset.id!;
       try {
         await apiFetch(`/api/headscale/nodes/${id}`, 'DELETE');

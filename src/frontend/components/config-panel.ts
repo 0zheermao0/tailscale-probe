@@ -101,6 +101,8 @@ async function saveConfig(form: HTMLFormElement): Promise<void> {
   const toEmails = get('cfg-email-to').split(',').map(s => s.trim()).filter(Boolean);
 
   const hsKey = get('cfg-hs-key');
+  const tgToken = get('cfg-tg-token');
+  const emailPass = get('cfg-email-pass');
   const patch: ConfigData = {
     monitor: { interval: getNum('cfg-interval') },
     headscale: {
@@ -111,7 +113,7 @@ async function saveConfig(form: HTMLFormElement): Promise<void> {
       dedupe_window_seconds: getNum('cfg-dedupe'),
       telegram: {
         enabled: getChecked('cfg-tg-enabled'),
-        bot_token: get('cfg-tg-token') || undefined as unknown as string,
+        ...(tgToken && tgToken !== '***' ? { bot_token: tgToken } : {}),
         chat_id: get('cfg-tg-chat'),
       },
       email: {
@@ -119,7 +121,7 @@ async function saveConfig(form: HTMLFormElement): Promise<void> {
         smtp_host: get('cfg-email-host'),
         smtp_port: getNum('cfg-email-port'),
         username: get('cfg-email-user'),
-        password: get('cfg-email-pass') || undefined as unknown as string,
+        ...(emailPass ? { password: emailPass } : {}),
         from: get('cfg-email-from'),
         to: toEmails,
       },

@@ -4,8 +4,20 @@ import { showToast } from './toast.js';
 export async function renderHsDns(container: HTMLElement): Promise<void> {
   const res = await fetch('/api/headscale/dns');
   const data = await res.json() as HeadscaleDns & { error?: string };
-  if (!res.ok || data.error) {
-    container.innerHTML = `<div class="empty-state" style="color:#f87171">Failed to load DNS config: ${data.error ?? res.statusText}</div>`;
+  if (!res.ok) {
+    // Newer headscale versions removed the /api/v1/dns/settings endpoint
+    container.innerHTML = `
+      <div class="hs-section-header">
+        <span class="hs-section-title">DNS Configuration</span>
+      </div>
+      <div class="empty-state" style="color:var(--text-muted)">
+        DNS configuration API is not available in this Headscale version.<br>
+        <span style="font-size:11px">Manage DNS settings directly in your <code style="font-family:var(--font-mono);background:rgba(255,255,255,.06);padding:1px 4px;border-radius:3px">config.yaml</code> on the Headscale server.</span>
+      </div>`;
+    return;
+  }
+  if (data.error) {
+    container.innerHTML = `<div class="empty-state" style="color:#f87171">Failed to load DNS config: ${data.error}</div>`;
     return;
   }
   render(container, data);
