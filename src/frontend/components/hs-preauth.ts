@@ -2,6 +2,10 @@ import type { HeadscalePreauthKey, HeadscaleUser } from '../../backend/types.js'
 import { showToast } from './toast.js';
 import { showConfirm } from './dialog.js';
 
+function buildTailscaleUpCmd(key: string, hsUrl: string): string {
+  return `tailscale up --login-server=${hsUrl} --authkey=${key} --accept-routes --accept-dns=true --advertise-exit-node --advertise-routes <routes> --ssh`;
+}
+
 function buildPreauthCLICmd(userId: string, reusable: boolean, ephemeral: boolean, expiryIso: string, tagsRaw: string): string {
   let cmd = `headscale preauthkeys create --user ${userId}`;
   if (reusable) cmd += ' --reusable';
@@ -17,7 +21,10 @@ function buildPreauthCLICmd(userId: string, reusable: boolean, ephemeral: boolea
 }
 
 export async function renderHsPreauth(container: HTMLElement): Promise<void> {
-  const usersRes = await fetch('/api/headscale/users');
+  const [usersRes, statusRes] = await Promise.all([
+    fetch('/api/headscale/users'),
+    fetch('/api/headscale/status'),
+  ]);
   const usersData = await usersRes.json() as HeadscaleUser[] & { error?: string };
   if (!usersRes.ok || (usersData as { error?: string }).error) {
     container.innerHTML = `<div class="empty-state" style="color:#f87171">Failed to load users: ${(usersData as { error?: string }).error ?? usersRes.statusText}</div>`;
@@ -28,10 +35,12 @@ export async function renderHsPreauth(container: HTMLElement): Promise<void> {
     container.innerHTML = '<div class="empty-state">No users found. Create a user first.</div>';
     return;
   }
-  await render(container, users, users[0].name);
+  const statusData = await statusRes.json() as { url?: string };
+  const hsUrl = statusData.url ?? 'http://localhost:8080';
+  await render(container, users, users[0].name, hsUrl);
 }
 
-async function render(container: HTMLElement, users: HeadscaleUser[], selectedUser: string): Promise<void> {
+async function render(container: HTMLElement, users: HeadscaleUser[], selectedUser: string, hsUrl: string): Promise<void> {
   const keysRes = await fetch(`/api/headscale/preauthkeys?user=${encodeURIComponent(selectedUser)}`);
   const keysData = await keysRes.json() as HeadscalePreauthKey[] & { error?: string };
   if (!keysRes.ok || (keysData as { error?: string }).error) {
@@ -81,12 +90,12 @@ async function render(container: HTMLElement, users: HeadscaleUser[], selectedUs
       </div>
     </div>
 
-    <div id="hs-preauth-table">${buildTable(keys)}</div>
+    <div id="hs-preauth-table">${buildTable(keys, hsUrl)}</div>
   `;
 
   document.getElementById('hs-preauth-user')?.addEventListener('change', async (e) => {
     const user = (e.target as HTMLSelectElement).value;
-    await render(container, users, user);
+    await render(container, users, user, hsUrl);
   });
 
   document.getElementById('hs-copy-pk-cli-btn')?.addEventListener('click', () => {
@@ -136,17 +145,17 @@ async function render(container: HTMLElement, users: HeadscaleUser[], selectedUs
       if (tableEl) {
         const keysRes2 = await fetch(`/api/headscale/preauthkeys?user=${encodeURIComponent(selectedUser)}`);
         const keys2 = await keysRes2.json() as HeadscalePreauthKey[];
-        tableEl.innerHTML = buildTable(keys2);
-        attachTableActions(tableEl, users, selectedUser, container);
+        tableEl.innerHTML = buildTable(keys2, hsUrl);
+        attachTableActions(tableEl, users, selectedUser, container, hsUrl);
       }
     } catch (err) { showToast(`Failed: ${err}`, 'error'); }
   });
 
   const tableEl = document.getElementById('hs-preauth-table');
-  if (tableEl) attachTableActions(tableEl, users, selectedUser, container);
+  if (tableEl) attachTableActions(tableEl, users, selectedUser, container, hsUrl);
 }
 
-function buildTable(keys: HeadscalePreauthKey[]): string {
+function buildTable(keys: HeadscalePreauthKey[], hsUrl: string): string {
   if (keys.length === 0) return '<div class="empty-state" style="margin-top:8px">No pre-auth keys for this user</div>';
 
   const rows = keys.map(k => {
@@ -157,6 +166,7 @@ function buildTable(keys: HeadscalePreauthKey[]): string {
     const tags = (k.aclTags ?? []).join(', ') || '—';
     const keyShort = k.key ? k.key.slice(0, 16) + '…' : '—';
     const userName = typeof k.user === 'object' ? k.user.name : String(k.user);
+    const upCmd = esc(buildTailscaleUpCmd(k.key, hsUrl));
 
     return `<tr>
       <td style="font-family:var(--font-mono);font-size:11px">
@@ -169,6 +179,7 @@ function buildTable(keys: HeadscalePreauthKey[]): string {
       <td style="font-size:11px;color:var(--text-muted)">${esc(tags)}</td>
       <td>
         <div class="actions">
+          <button class="hs-btn cli hs-copy-up-btn" data-cmd="${upCmd}" title="Copy tailscale up command">$ up cmd</button>
           <button class="hs-btn danger hs-expire-pk-btn" data-user="${esc(userName)}" data-key="${esc(k.key)}" ${k.used || expired ? 'disabled' : ''}>Expire</button>
         </div>
       </td>
@@ -187,8 +198,17 @@ function attachTableActions(
   tableEl: HTMLElement,
   users: HeadscaleUser[],
   selectedUser: string,
-  container: HTMLElement
+  container: HTMLElement,
+  _hsUrl: string
 ): void {
+  tableEl.querySelectorAll<HTMLElement>('.hs-copy-up-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const cmd = btn.dataset.cmd ?? '';
+      navigator.clipboard.writeText(cmd).catch(() => {});
+      showToast('Command copied', 'success');
+    });
+  });
+
   tableEl.querySelectorAll<HTMLElement>('.hs-expire-pk-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
       if (!await showConfirm({ title: 'Expire Key', message: 'This pre-auth key will stop working immediately.', confirmLabel: 'Expire', danger: true })) return;

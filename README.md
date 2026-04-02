@@ -146,7 +146,7 @@ To authenticate, add your Headscale API key in the Config drawer under **Headsca
 |-----|-----------|
 | **Nodes** | List, rename, move to user, tag, expire, delete |
 | **Users** | List, create, rename, delete |
-| **Pre-auth Keys** | Generate (reusable/ephemeral/tagged), expire |
+| **Pre-auth Keys** | Generate (reusable/ephemeral/tagged), expire; copy `tailscale up` join command per key |
 | **Routes** | View advertised routes and approval status |
 | **ACL Policy** | View and edit HuJSON policy |
 | **DNS** | MagicDNS toggle, nameservers, search domains, extra records |
@@ -161,7 +161,7 @@ Each management tab includes **$ copy cmd** buttons that copy the equivalent `he
 Examples:
 - Routes tab: pending route rows show `$ approve` → copies `headscale nodes approve-routes --identifier <id> --routes <prefix>`
 - Nodes tab: Expire/Delete actions each have a `$` button → copies `headscale nodes expire/delete --identifier <id>`
-- Pre-auth Keys: `$ copy cmd` next to Generate → copies `headscale preauthkeys create --user <id> [flags]`
+- Pre-auth Keys: `$ copy cmd` next to Generate → copies `headscale preauthkeys create --user <id> [flags]`; each key row has `$ up cmd` → copies `tailscale up --login-server=<url> --authkey=<key> --accept-routes --accept-dns=true --advertise-exit-node --advertise-routes <routes> --ssh`
 - Users / API Keys: `$ copy cmd` next to Create → copies the create command with current form values
 
 ---
