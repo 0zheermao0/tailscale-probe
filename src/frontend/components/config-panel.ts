@@ -10,6 +10,7 @@ interface ConfigData {
       enabled?: boolean;
       bot_token?: string;
       chat_id?: string;
+      proxy?: string;
     };
     email?: {
       enabled?: boolean;
@@ -84,6 +85,7 @@ function populateForm(cfg: ConfigData): void {
   set('cfg-tg-enabled', cfg.notifications?.telegram?.enabled ?? false);
   set('cfg-tg-token', cfg.notifications?.telegram?.bot_token ?? '');
   set('cfg-tg-chat', cfg.notifications?.telegram?.chat_id ?? '');
+  set('cfg-tg-proxy', cfg.notifications?.telegram?.proxy ?? '');
   set('cfg-email-enabled', cfg.notifications?.email?.enabled ?? false);
   set('cfg-email-host', cfg.notifications?.email?.smtp_host ?? '');
   set('cfg-email-port', cfg.notifications?.email?.smtp_port ?? 587);
@@ -115,6 +117,7 @@ async function saveConfig(form: HTMLFormElement): Promise<void> {
         enabled: getChecked('cfg-tg-enabled'),
         ...(tgToken && tgToken !== '***' ? { bot_token: tgToken } : {}),
         chat_id: get('cfg-tg-chat'),
+        proxy: get('cfg-tg-proxy'),
       },
       email: {
         enabled: getChecked('cfg-email-enabled'),

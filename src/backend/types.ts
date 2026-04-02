@@ -254,6 +254,7 @@ export interface AppConfig {
       bot_token: string;
       chat_id: string;
       parse_mode: string;
+      proxy: string;
     };
     email: {
       enabled: boolean;
@@ -291,6 +292,7 @@ export const defaultConfig: AppConfig = {
       bot_token: '',
       chat_id: '',
       parse_mode: 'HTML',
+      proxy: '',
     },
     email: {
       enabled: false,

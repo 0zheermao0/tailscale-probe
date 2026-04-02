@@ -91,6 +91,7 @@ notifications:
     bot_token: "YOUR_BOT_TOKEN"
     chat_id: "YOUR_CHAT_ID"
     parse_mode: HTML
+    # proxy: "socks5://127.0.0.1:1080"   # Optional: proxy for regions where Telegram is blocked
 
   email:
     enabled: false

@@ -24,6 +24,8 @@ notifications:
     chat_id: "YOUR_CHAT_ID"
     # HTML or Markdown
     parse_mode: HTML
+    # Optional proxy for regions where Telegram is blocked (e.g. socks5://127.0.0.1:1080)
+    # proxy: "socks5://127.0.0.1:1080"
 
   email:
     enabled: false

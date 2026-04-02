@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import { ProxyAgent } from 'undici';
 import { ChangeEvent, AppConfig } from './types.js';
 
 function escHtml(s: string): string {
@@ -181,11 +182,16 @@ ${rows}
     });
 
     try {
-      const res = await fetch(url, {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const fetchOpts: any = {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body,
-      });
+      };
+      if (cfg.proxy) {
+        fetchOpts.dispatcher = new ProxyAgent(cfg.proxy);
+      }
+      const res = await fetch(url, fetchOpts);
       if (!res.ok) {
         const err = await res.text();
         console.error(`Telegram notification failed: ${res.status} ${err}`);
