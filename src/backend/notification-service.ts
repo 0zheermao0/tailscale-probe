@@ -42,13 +42,25 @@ const EVENT_TAGS: Record<string, string> = {
 export class NotificationService {
   private config: AppConfig['notifications'];
   private dedupeMap = new Map<string, number>();
+  private proxyAgent: ProxyAgent | null = null;
+  private proxyUrl: string = '';
 
   constructor(config: AppConfig['notifications']) {
     this.config = config;
+    this.rebuildProxyAgent();
   }
 
   updateConfig(config: AppConfig['notifications']): void {
     this.config = config;
+    this.rebuildProxyAgent();
+  }
+
+  private rebuildProxyAgent(): void {
+    const newUrl = this.config.telegram.proxy ?? '';
+    if (newUrl === this.proxyUrl) return;
+    this.proxyAgent?.close().catch(() => {});
+    this.proxyAgent = newUrl ? new ProxyAgent(newUrl) : null;
+    this.proxyUrl = newUrl;
   }
 
   private evictExpiredDedupeEntries(): void {
@@ -188,8 +200,8 @@ ${rows}
         headers: { 'Content-Type': 'application/json' },
         body,
       };
-      if (cfg.proxy) {
-        fetchOpts.dispatcher = new ProxyAgent(cfg.proxy);
+      if (this.proxyAgent) {
+        fetchOpts.dispatcher = this.proxyAgent;
       }
       const res = await fetch(url, fetchOpts);
       if (!res.ok) {
