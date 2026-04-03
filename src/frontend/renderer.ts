@@ -33,27 +33,7 @@ export function initRenderer(): void {
 }
 
 function initPeersToolbar(): void {
-  const toolbar = document.getElementById('peers-toolbar');
-  if (!toolbar) return;
-
-  toolbar.innerHTML = `
-    <span class="toolbar-label">Sort</span>
-    <div class="peers-sort-group">
-      <button class="peers-sort-btn active" data-field="status" data-dir="asc">Status</button>
-      <button class="peers-sort-btn" data-field="hostname">Name</button>
-      <button class="peers-sort-btn" data-field="ip">IP</button>
-    </div>
-    <div class="peers-toolbar-divider"></div>
-    <span class="toolbar-label">Filter</span>
-    <div class="peers-filter-group">
-      <button class="peers-filter-chip active" data-filter="all">All</button>
-      <button class="peers-filter-chip" data-filter="online">Online</button>
-      <button class="peers-filter-chip" data-filter="offline">Offline</button>
-    </div>
-    <input class="peers-search" type="search" placeholder="Search by name or IP…" autocomplete="off" />
-  `;
-
-  toolbar.querySelectorAll<HTMLElement>('.peers-sort-btn').forEach(btn => {
+  document.querySelectorAll<HTMLElement>('.ptb-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const field = btn.dataset.field as SortField;
       if (peersUI.sort.field === field) {
@@ -66,7 +46,7 @@ function initPeersToolbar(): void {
     });
   });
 
-  toolbar.querySelectorAll<HTMLElement>('.peers-filter-chip').forEach(chip => {
+  document.querySelectorAll<HTMLElement>('.ptb-chip').forEach(chip => {
     chip.addEventListener('click', () => {
       peersUI.filter = chip.dataset.filter as FilterStatus;
       const state = store.get();
@@ -74,7 +54,7 @@ function initPeersToolbar(): void {
     });
   });
 
-  toolbar.querySelector<HTMLInputElement>('.peers-search')?.addEventListener('input', (e) => {
+  document.getElementById('peers-search')?.addEventListener('input', (e) => {
     peersUI.query = (e.target as HTMLInputElement).value;
     const state = store.get();
     renderPeers(state.snapshot?.peers ?? [], state.snapshot?.activeExitNodeID ?? null);
@@ -116,12 +96,12 @@ function applyPeersUI(peers: PeerSnapshot[]): PeerSnapshot[] {
 }
 
 function updateToolbarUI(): void {
-  document.querySelectorAll<HTMLElement>('.peers-sort-btn').forEach(btn => {
+  document.querySelectorAll<HTMLElement>('.ptb-btn').forEach(btn => {
     const isActive = btn.dataset.field === peersUI.sort.field;
     btn.classList.toggle('active', isActive);
     btn.dataset.dir = isActive ? peersUI.sort.dir : '';
   });
-  document.querySelectorAll<HTMLElement>('.peers-filter-chip').forEach(chip => {
+  document.querySelectorAll<HTMLElement>('.ptb-chip').forEach(chip => {
     chip.classList.toggle('active', chip.dataset.filter === peersUI.filter);
   });
 }

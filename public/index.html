@@ -78,8 +78,25 @@
 
     <!-- Peers grid -->
     <main>
-      <div class="section-label">Network Peers</div>
-      <div id="peers-toolbar"></div>
+      <div class="peers-header">
+        <span class="section-label" style="margin-bottom:0">Network Peers</span>
+        <div id="peers-toolbar">
+          <span class="ptb-label">Sort</span>
+          <div class="ptb-group">
+            <button class="ptb-btn active" data-field="status" data-dir="asc">Status</button>
+            <button class="ptb-btn" data-field="hostname">Name</button>
+            <button class="ptb-btn" data-field="ip">IP</button>
+          </div>
+          <div class="ptb-sep"></div>
+          <span class="ptb-label">Filter</span>
+          <div class="ptb-group">
+            <button class="ptb-chip active" data-filter="all">All</button>
+            <button class="ptb-chip" data-filter="online">Online</button>
+            <button class="ptb-chip" data-filter="offline">Offline</button>
+          </div>
+          <input class="ptb-search" id="peers-search" type="search" placeholder="Search…" autocomplete="off" />
+        </div>
+      </div>
       <div id="peers-grid">
         <!-- Cards rendered by JS -->
       </div>
