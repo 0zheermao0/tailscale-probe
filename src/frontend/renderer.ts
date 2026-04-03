@@ -13,6 +13,19 @@ const peersUI = {
   query: '',
 };
 
+const LOG_PAGE = 20;
+const logUI = {
+  filter: 'all',
+  visible: LOG_PAGE,
+};
+
+const LOG_FILTER_MAP: Record<string, string[]> = {
+  peers:      ['peer_online', 'peer_offline'],
+  connection: ['connection_direct', 'connection_relay'],
+  exit:       ['exit_node_connected', 'exit_node_disconnected', 'exit_node_changed'],
+  daemon:     ['tailscale_daemon_lost', 'tailscale_daemon_recovered'],
+};
+
 const EVENT_ICONS: Record<string, string> = {
   peer_online: '🟢',
   peer_offline: '🔴',
@@ -30,6 +43,20 @@ export function initRenderer(): void {
   initCopyHandler();
   initPeerClickHandler();
   initPeersToolbar();
+  initLogFilter();
+}
+
+function initLogFilter(): void {
+  document.querySelectorAll<HTMLElement>('.log-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      logUI.filter = chip.dataset.logFilter ?? 'all';
+      logUI.visible = LOG_PAGE;
+      document.querySelectorAll<HTMLElement>('.log-chip').forEach(c =>
+        c.classList.toggle('active', c.dataset.logFilter === logUI.filter)
+      );
+      renderHistory(store.get().history);
+    });
+  });
 }
 
 function initPeersToolbar(): void {
@@ -216,12 +243,20 @@ function renderHistory(history: ChangeEvent[]): void {
   const list = document.getElementById('change-log');
   if (!list) return;
 
-  if (history.length === 0) {
-    list.innerHTML = '<div class="empty-state">No events yet</div>';
+  const filtered = logUI.filter === 'all'
+    ? history
+    : history.filter(e => LOG_FILTER_MAP[logUI.filter]?.includes(e.type));
+
+  if (filtered.length === 0) {
+    list.innerHTML = `<div class="empty-state">${history.length === 0 ? 'No events yet' : 'No events match this filter'}</div>`;
     return;
   }
 
-  list.innerHTML = history.slice(0, 50).map(event => {
+  const page = filtered.slice(0, logUI.visible);
+  const remaining = filtered.length - logUI.visible;
+  const hasMore = remaining > 0;
+
+  list.innerHTML = page.map(event => {
     const icon = EVENT_ICONS[event.type] ?? 'ℹ️';
     const time = new Date(event.timestamp).toLocaleTimeString();
     return `<div class="log-entry log-${event.type}">
@@ -229,5 +264,12 @@ function renderHistory(history: ChangeEvent[]): void {
       <span class="log-msg">${event.message}</span>
       <span class="log-time">${time}</span>
     </div>`;
-  }).join('');
+  }).join('') + (hasMore
+    ? `<button class="log-load-more" id="log-load-more">Load ${Math.min(LOG_PAGE, remaining)} more</button>`
+    : '');
+
+  document.getElementById('log-load-more')?.addEventListener('click', () => {
+    logUI.visible += LOG_PAGE;
+    renderHistory(store.get().history);
+  }, { once: true });
 }

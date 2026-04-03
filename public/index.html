@@ -68,7 +68,14 @@
       <!-- Change log -->
       <div class="log-panel">
         <div class="section-label">Event Log</div>
-        <div class="glass-card" style="padding:12px;flex:1;">
+        <div class="glass-card log-glass">
+          <div class="log-filter-bar">
+            <button class="log-chip active" data-log-filter="all">All</button>
+            <button class="log-chip" data-log-filter="peers">Peers</button>
+            <button class="log-chip" data-log-filter="connection">Connection</button>
+            <button class="log-chip" data-log-filter="exit">Exit Node</button>
+            <button class="log-chip" data-log-filter="daemon">Daemon</button>
+          </div>
           <div id="change-log">
             <div class="empty-state">Waiting for events...</div>
           </div>

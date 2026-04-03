@@ -52,7 +52,8 @@ body {
 .app {
   display: grid;
   grid-template-rows: auto 1fr;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   position: relative;
   z-index: 1;
 }
@@ -67,6 +68,8 @@ body {
   max-width: 1600px;
   margin: 0 auto;
   width: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
 @media (max-width: 900px) {
@@ -136,9 +139,19 @@ body {
   margin-bottom: 10px;
 }
 
+/* Sidebar column */
+.main-content > aside {
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  grid-row: 1 / -1;
+}
+
 /* Peers main column */
 .main-content > main {
   min-width: 0;
+  overflow-y: auto;
 }
 
 /* Peers header row (title + toolbar on same line) */
@@ -238,17 +251,27 @@ body {
 
 .log-panel {
   flex: 1;
-  overflow: hidden;
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
 
+.log-glass {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  overflow: hidden;
+}
+
 #change-log {
+  flex: 1;
   overflow-y: auto;
-  max-height: 400px;
   display: flex;
   flex-direction: column;
   gap: 4px;
+  padding: 0 2px;
 }
 
 /* Buttons */
