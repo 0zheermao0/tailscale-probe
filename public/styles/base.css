@@ -148,13 +148,14 @@ body {
 .peers-toolbar {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
+  flex-wrap: nowrap;
+  gap: 6px;
   margin-bottom: 14px;
-  padding: 8px 12px;
+  padding: 6px 10px;
   background: rgba(255,255,255,.025);
   border: 1px solid var(--border);
   border-radius: var(--radius);
+  min-width: 0;
 }
 .toolbar-label {
   font-size: 10px;
@@ -164,9 +165,10 @@ body {
   color: var(--text-muted);
   padding-right: 6px;
   border-right: 1px solid var(--border);
-  margin-right: 2px;
+  margin-right: 1px;
   line-height: 1;
   align-self: center;
+  flex-shrink: 0;
 }
 /* Segmented control wrapper */
 .peers-sort-group,
@@ -181,7 +183,7 @@ body {
 }
 .peers-sort-btn,
 .peers-filter-chip {
-  padding: 3px 11px;
+  padding: 3px 9px;
   font-size: 11px;
   font-weight: 500;
   border-radius: calc(var(--radius-sm) - 2px);
@@ -222,7 +224,8 @@ body {
 }
 .peers-search {
   margin-left: auto;
-  width: 190px;
+  width: 150px;
+  flex-shrink: 0;
   background: rgba(0,0,0,.25);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
