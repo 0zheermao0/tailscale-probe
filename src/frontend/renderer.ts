@@ -3,6 +3,16 @@ import { renderSelfPanel } from './components/self-panel.js';
 import { createNodeCard, updateNodeCard } from './components/node-card.js';
 import type { PeerSnapshot, ChangeEvent } from '../backend/types.js';
 
+type SortField = 'hostname' | 'ip' | 'status';
+type SortDir = 'asc' | 'desc';
+type FilterStatus = 'all' | 'online' | 'offline';
+
+const peersUI = {
+  sort: { field: 'status' as SortField, dir: 'asc' as SortDir },
+  filter: 'all' as FilterStatus,
+  query: '',
+};
+
 const EVENT_ICONS: Record<string, string> = {
   peer_online: '🟢',
   peer_offline: '🔴',
@@ -19,6 +29,99 @@ export function initRenderer(): void {
   store.subscribe(render);
   initCopyHandler();
   initPeerClickHandler();
+  initPeersToolbar();
+}
+
+function initPeersToolbar(): void {
+  const toolbar = document.getElementById('peers-toolbar');
+  if (!toolbar) return;
+
+  toolbar.innerHTML = `
+    <div class="peers-sort-group">
+      <span class="toolbar-label">Sort</span>
+      <button class="peers-sort-btn active" data-field="status">Status</button>
+      <button class="peers-sort-btn" data-field="hostname">Name</button>
+      <button class="peers-sort-btn" data-field="ip">IP</button>
+    </div>
+    <div class="peers-filter-group">
+      <button class="peers-filter-chip active" data-filter="all">All</button>
+      <button class="peers-filter-chip" data-filter="online">Online</button>
+      <button class="peers-filter-chip" data-filter="offline">Offline</button>
+    </div>
+    <input class="peers-search" type="search" placeholder="Search peers…" autocomplete="off" />
+  `;
+
+  toolbar.querySelectorAll<HTMLElement>('.peers-sort-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const field = btn.dataset.field as SortField;
+      if (peersUI.sort.field === field) {
+        peersUI.sort.dir = peersUI.sort.dir === 'asc' ? 'desc' : 'asc';
+      } else {
+        peersUI.sort = { field, dir: 'asc' };
+      }
+      const state = store.get();
+      renderPeers(state.snapshot?.peers ?? [], state.snapshot?.activeExitNodeID ?? null);
+    });
+  });
+
+  toolbar.querySelectorAll<HTMLElement>('.peers-filter-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      peersUI.filter = chip.dataset.filter as FilterStatus;
+      const state = store.get();
+      renderPeers(state.snapshot?.peers ?? [], state.snapshot?.activeExitNodeID ?? null);
+    });
+  });
+
+  toolbar.querySelector<HTMLInputElement>('.peers-search')?.addEventListener('input', (e) => {
+    peersUI.query = (e.target as HTMLInputElement).value;
+    const state = store.get();
+    renderPeers(state.snapshot?.peers ?? [], state.snapshot?.activeExitNodeID ?? null);
+  });
+}
+
+function applyPeersUI(peers: PeerSnapshot[]): PeerSnapshot[] {
+  let result = peers;
+
+  if (peersUI.filter === 'online')  result = result.filter(p => p.online);
+  if (peersUI.filter === 'offline') result = result.filter(p => !p.online);
+
+  const q = peersUI.query.trim().toLowerCase();
+  if (q) {
+    result = result.filter(p =>
+      p.hostname.toLowerCase().includes(q) ||
+      p.dnsName.toLowerCase().includes(q) ||
+      p.ips.some(ip => ip.includes(q))
+    );
+  }
+
+  const { field, dir } = peersUI.sort;
+  result = [...result].sort((a, b) => {
+    let cmp = 0;
+    if (field === 'status') {
+      cmp = (a.online === b.online) ? 0 : a.online ? -1 : 1;
+      if (cmp === 0) cmp = a.hostname.localeCompare(b.hostname);
+    } else if (field === 'hostname') {
+      cmp = a.hostname.localeCompare(b.hostname);
+    } else if (field === 'ip') {
+      const aip = a.ips.find(i => !i.includes(':')) ?? '';
+      const bip = b.ips.find(i => !i.includes(':')) ?? '';
+      cmp = aip.localeCompare(bip, undefined, { numeric: true });
+    }
+    return dir === 'asc' ? cmp : -cmp;
+  });
+
+  return result;
+}
+
+function updateToolbarUI(): void {
+  document.querySelectorAll<HTMLElement>('.peers-sort-btn').forEach(btn => {
+    const isActive = btn.dataset.field === peersUI.sort.field;
+    btn.classList.toggle('active', isActive);
+    btn.dataset.dir = isActive ? peersUI.sort.dir : '';
+  });
+  document.querySelectorAll<HTMLElement>('.peers-filter-chip').forEach(chip => {
+    chip.classList.toggle('active', chip.dataset.filter === peersUI.filter);
+  });
 }
 
 function initPeerClickHandler(): void {
@@ -92,11 +195,7 @@ function renderPeers(peers: PeerSnapshot[], activeExitNodeID: string | null): vo
   const grid = document.getElementById('peers-grid');
   if (!grid) return;
 
-  // Sort: online first, then alphabetically
-  const sorted = [...peers].sort((a, b) => {
-    if (a.online !== b.online) return a.online ? -1 : 1;
-    return a.hostname.localeCompare(b.hostname);
-  });
+  const sorted = applyPeersUI(peers);
 
   const existingCards = new Map<string, HTMLElement>();
   for (const el of grid.querySelectorAll<HTMLElement>('.node-card')) {
@@ -122,8 +221,13 @@ function renderPeers(peers: PeerSnapshot[], activeExitNodeID: string | null): vo
   }
 
   if (sorted.length === 0) {
-    grid.innerHTML = '<div class="empty-state">No peers found</div>';
+    const msg = peers.length === 0 ? 'No peers found'
+      : peersUI.query ? 'No peers match your search'
+      : 'No peers match the current filter';
+    grid.innerHTML = `<div class="empty-state">${msg}</div>`;
   }
+
+  updateToolbarUI();
 }
 
 function renderHistory(history: ChangeEvent[]): void {
