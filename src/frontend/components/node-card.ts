@@ -59,6 +59,8 @@ function buildCardHTML(peer: PeerSnapshot, isExitActive: boolean): string {
   };
   const osEmoji = osIcon[peer.os?.toLowerCase() ?? ''] ?? '💻';
 
+  const lastSeen = peer.online ? 'now' : formatRelativeTime(peer.lastSeen);
+
   return `
     <div class="node-header">
       <div class="node-title">
@@ -72,21 +74,18 @@ function buildCardHTML(peer: PeerSnapshot, isExitActive: boolean): string {
       ${ipv4 ? `<span class="ip ipv4 copyable" data-copy="${ipv4}">${ipv4}</span>` : ''}
       ${ipv6 ? `<span class="ip ipv6 copyable" data-copy="${ipv6}">${ipv6}</span>` : ''}
     </div>
-    <div class="node-badges">
-      ${connectionType}
-      ${exitBadge}
-    </div>
+    ${connectionType || exitBadge ? `<div class="node-badges">${connectionType}${exitBadge}</div>` : ''}
     <div class="node-meta">
       <span class="meta-item">
-        <span class="meta-label">Last seen</span>
-        <span class="meta-value">${peer.online ? 'now' : formatRelativeTime(peer.lastSeen)}</span>
+        <span class="meta-label">Seen</span>
+        <span class="meta-value">${lastSeen}</span>
       </span>
       <span class="meta-item">
-        <span class="meta-label">↓</span>
+        <span class="meta-label">RX</span>
         <span class="meta-value">${formatBytes(peer.rxBytes)}</span>
       </span>
       <span class="meta-item">
-        <span class="meta-label">↑</span>
+        <span class="meta-label">TX</span>
         <span class="meta-value">${formatBytes(peer.txBytes)}</span>
       </span>
     </div>

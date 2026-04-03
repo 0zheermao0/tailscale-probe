@@ -37,18 +37,20 @@ function initPeersToolbar(): void {
   if (!toolbar) return;
 
   toolbar.innerHTML = `
+    <span class="toolbar-label">Sort</span>
     <div class="peers-sort-group">
-      <span class="toolbar-label">Sort</span>
-      <button class="peers-sort-btn active" data-field="status">Status</button>
+      <button class="peers-sort-btn active" data-field="status" data-dir="asc">Status</button>
       <button class="peers-sort-btn" data-field="hostname">Name</button>
       <button class="peers-sort-btn" data-field="ip">IP</button>
     </div>
+    <div class="peers-toolbar-divider"></div>
+    <span class="toolbar-label">Filter</span>
     <div class="peers-filter-group">
       <button class="peers-filter-chip active" data-filter="all">All</button>
       <button class="peers-filter-chip" data-filter="online">Online</button>
       <button class="peers-filter-chip" data-filter="offline">Offline</button>
     </div>
-    <input class="peers-search" type="search" placeholder="Search peers…" autocomplete="off" />
+    <input class="peers-search" type="search" placeholder="Search by name or IP…" autocomplete="off" />
   `;
 
   toolbar.querySelectorAll<HTMLElement>('.peers-sort-btn').forEach(btn => {
@@ -202,22 +204,22 @@ function renderPeers(peers: PeerSnapshot[], activeExitNodeID: string | null): vo
     if (el.dataset.peerId) existingCards.set(el.dataset.peerId, el);
   }
 
-  const seen = new Set<string>();
+  // Remove cards for peers no longer in the list
+  const sortedIds = new Set(sorted.map(p => p.id));
+  for (const [id, el] of existingCards) {
+    if (!sortedIds.has(id)) el.remove();
+  }
+
+  // Upsert + reorder: appendChild on an existing child moves it, preserving sort order
   for (const peer of sorted) {
-    seen.add(peer.id);
     const isExit = peer.id === activeExitNodeID;
     const existing = existingCards.get(peer.id);
     if (existing) {
       updateNodeCard(existing, peer, isExit);
+      grid.appendChild(existing);
     } else {
-      const card = createNodeCard(peer, isExit);
-      grid.appendChild(card);
+      grid.appendChild(createNodeCard(peer, isExit));
     }
-  }
-
-  // Remove cards for peers that no longer exist
-  for (const [id, el] of existingCards) {
-    if (!seen.has(id)) el.remove();
   }
 
   if (sorted.length === 0) {
