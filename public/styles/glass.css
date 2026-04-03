@@ -588,7 +588,8 @@
 }
 
 .node-settings-body.expanded {
-  max-height: 1800px;
+  max-height: 40vh;
+  overflow-y: auto;
 }
 
 /* Settings form */
