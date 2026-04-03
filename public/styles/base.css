@@ -136,6 +136,12 @@ body {
   margin-bottom: 10px;
 }
 
+/* Peers main column */
+.main-content > main {
+  min-width: 0;
+  overflow: hidden;
+}
+
 /* Peers grid */
 #peers-grid {
   display: grid;
@@ -155,7 +161,8 @@ body {
   background: rgba(255,255,255,.025);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 .toolbar-label {
   font-size: 10px;
