@@ -12,7 +12,7 @@ const backendOptions: esbuild.BuildOptions = {
   platform: 'node',
   format: 'esm',
   outfile: 'dist/backend.js',
-  external: ['chokidar', 'nodemailer', 'fastify', '@fastify/static', 'js-yaml'],
+  external: ['chokidar', 'nodemailer', 'fastify', '@fastify/static', 'js-yaml', 'undici'],
   sourcemap: true,
   target: 'node20',
 };

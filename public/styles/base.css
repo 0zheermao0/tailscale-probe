@@ -72,10 +72,112 @@ body {
   overflow: hidden;
 }
 
+/* ── Tablet ≤900px ─────────────────────────────────────────────────────── */
 @media (max-width: 900px) {
+  /* Release fixed viewport height — allow page scroll, clip horizontal bleed */
+  .app {
+    height: auto;
+    min-height: 100vh;
+    overflow-x: hidden;
+    overflow-y: visible;
+  }
+
+  /* Single column, natural row heights */
   .main-content {
     grid-template-columns: 1fr;
+    grid-template-rows: auto auto;
+    overflow: visible;
   }
+
+  /* Sidebar: natural height, no overflow clipping */
+  .main-content > aside {
+    grid-row: auto;
+    overflow: visible;
+    min-height: auto;
+  }
+
+  .sidebar {
+    gap: 16px;
+  }
+
+  /* Log panel: fixed height so it doesn't try to fill the viewport */
+  .log-panel {
+    flex: none;
+  }
+  .log-glass {
+    flex: none;
+    max-height: 280px;
+  }
+  #change-log {
+    max-height: 200px;
+  }
+
+  /* Main: natural scroll */
+  .main-content > main {
+    overflow-y: visible;
+  }
+
+  /* Peers grid: 2 columns on tablet */
+  #peers-grid {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  }
+}
+
+/* ── Mobile ≤600px ─────────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  /* Compact header — allow wrapping if tab buttons appear */
+  .app-header {
+    padding: 10px 14px;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .app-title { font-size: 14px; }
+  .app-logo { width: 24px; height: 24px; font-size: 13px; border-radius: 6px; }
+  .header-left { gap: 8px; }
+  .header-right { gap: 5px; flex-wrap: wrap; }
+  .peer-count { display: none; }
+  /* Header buttons: icon-only on very small screens */
+  .btn { padding: 5px 9px; font-size: 11px; gap: 4px; }
+  .connection-badge { font-size: 10px; padding: 3px 7px; }
+
+  /* Tighter content padding */
+  .main-content {
+    padding: 10px;
+    gap: 12px;
+  }
+
+  /* Peers header: stack label + toolbar vertically */
+  .peers-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  /* Toolbar: scrollable row, full width */
+  #peers-toolbar {
+    overflow-x: auto;
+    width: 100%;
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  #peers-toolbar::-webkit-scrollbar { display: none; }
+
+  /* Peers grid: single column */
+  #peers-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  /* Section label: tighter bottom margin */
+  .section-label { margin-bottom: 7px; }
+
+  /* Sidebar gap */
+  .sidebar { gap: 12px; }
+
+  /* Log panel smaller on mobile */
+  .log-glass { max-height: 240px; }
+  #change-log { max-height: 170px; }
 }
 
 /* Header */

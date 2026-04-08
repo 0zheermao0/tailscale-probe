@@ -65,7 +65,7 @@ export function makeTableState<T>(
         if (typeof av === 'number' && typeof bv === 'number') {
           cmp = av - bv;
         } else {
-          cmp = String(av).localeCompare(String(bv));
+          cmp = String(av).localeCompare(String(bv), undefined, { numeric: true });
         }
         return dir === 'asc' ? cmp : -cmp;
       });

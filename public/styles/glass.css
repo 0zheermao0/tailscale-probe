@@ -1318,3 +1318,134 @@
   background: rgba(124,111,247,.2);
   border-color: rgba(124,111,247,.4);
 }
+
+/* ── Tablet ≤900px glass overrides ─────────────────────────────────────── */
+@media (max-width: 900px) {
+  /* Headscale panel: constrain width, let tab content scroll horizontally */
+  .headscale-panel {
+    overflow: hidden;
+    min-height: auto;
+    padding: 0 16px 20px;
+    max-width: 100vw;
+    box-sizing: border-box;
+  }
+  .hs-tab-content {
+    overflow-x: auto;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+  }
+  .hs-table { min-width: 600px; }
+
+  /* Peer modal: wider on tablet */
+  .peer-modal {
+    width: min(560px, 96vw);
+  }
+}
+
+/* ── Mobile overrides ≤600px ────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  /* ── Glass card: reduce hover lift (fat finger friendly) */
+  .glass-card:hover { transform: none; }
+
+  /* ── Node card ── */
+  .node-card { padding: 11px 12px; gap: 7px; }
+  /* Disable hover lift on touch */
+  .node-card:hover { transform: none; box-shadow: none; }
+
+  /* DNS name: allow wrap */
+  .node-dns { white-space: normal; word-break: break-all; }
+
+  /* IPv6 pill: truncate aggressively */
+  .ip.ipv6 { max-width: 160px; }
+
+  /* Meta row: smaller text */
+  .meta-label { font-size: 8px; }
+  .meta-value { font-size: 10px; }
+
+  /* ── Self card ── */
+  #self-panel .glass-card,
+  .self-card { padding: 14px; }
+  .self-hostname { font-size: 15px; }
+  .self-traffic { font-size: 11px; gap: 12px; }
+
+  /* ── Node settings ── */
+  .node-settings-body.expanded { max-height: 55vh; }
+  .settings-form { padding: 0 12px 14px; gap: 12px; }
+
+  /* ── Log entries ── */
+  .log-entry { padding: 6px 8px; gap: 6px; }
+  .log-msg { font-size: 11px; }
+  .log-time { font-size: 9px; }
+  .log-chip { font-size: 9px; padding: 2px 7px; }
+
+  /* ── Peer detail modal → bottom sheet ── */
+  .peer-modal {
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-width: 100%;
+    max-height: 88vh;
+    transform: translateY(10px);
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+    border-bottom: none;
+  }
+  .peer-modal.visible {
+    transform: translateY(0);
+  }
+  /* Drag handle indicator */
+  .peer-modal-header::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 36px;
+    height: 4px;
+    background: rgba(255,255,255,.15);
+    border-radius: 2px;
+  }
+  .peer-modal-header {
+    position: relative;
+    padding-top: 22px;
+  }
+  .peer-modal-body { padding: 16px; gap: 14px; }
+  .detail-label { width: 90px; font-size: 10px; }
+  .detail-value { font-size: 11px; }
+
+  /* ── Config drawer → full-width ── */
+  #config-drawer { width: 100vw; }
+  .drawer-header { padding: 12px 16px; }
+  .drawer-body { padding: 14px 16px; gap: 18px; }
+  .form-row input[type="text"],
+  .form-row input[type="email"],
+  .form-row input[type="number"],
+  .form-row input[type="password"] {
+    padding: 7px 10px;
+    font-size: 12px;
+  }
+
+  /* ── Headscale panel ── */
+  .headscale-panel {
+    overflow: hidden;
+    min-height: auto;
+    padding: 0 10px 16px;
+    max-width: 100vw;
+    box-sizing: border-box;
+  }
+  .hs-tabs { gap: 3px; padding: 10px 0; overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .hs-tabs::-webkit-scrollbar { display: none; }
+  .hs-tab { padding: 5px 10px; font-size: 12px; flex-shrink: 0; }
+  .hs-tab-content {
+    overflow-x: auto;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+    padding-top: 12px;
+    width: 100%;
+  }
+  .hs-table { min-width: 520px; font-size: 12px; }
+  .hs-table th { padding: 5px 8px; }
+  .hs-table td { padding: 6px 8px; }
+}

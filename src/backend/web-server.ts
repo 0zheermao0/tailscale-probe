@@ -78,7 +78,7 @@ export class WebServer {
   }
 
   private setupRoutes(): void {
-    const publicDir = join(__dirname, '../../public');
+    const publicDir = join(process.cwd(), 'public');
 
     this.fastify.register(fastifyStatic, {
       root: publicDir,
